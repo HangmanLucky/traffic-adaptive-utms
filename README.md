@@ -43,16 +43,16 @@ actuated traffic control.
 
 ## 🖥️ HMI — Live Intersection Map
 
-The `hmi/index.html` mockup is a top-down 4-way intersection with animated cars,
+The `index.html` mockup is a top-down 4-way intersection with animated cars,
 in-pavement loop detector pads that light up when a car sits on them, signal heads
 that reflect the live phase, longest-wait registers, and a scripted emergency
 preemption event partway through the demo.
 
-![HMI Dashboard](images/hmi-dashboard.png)
+![HMI Dashboard](hmi-dashboard.png)
 
 ## 🗺️ System Architecture
 
-![Architecture Diagram](images/architecture_diagram.svg)
+![Architecture Diagram](architecture_diagram.svg)
 
 ## ⚙️ Key Engineering Concepts
 
@@ -83,9 +83,9 @@ traffic-adaptive-utms/
 
 ## 📄 Documentation
 
-- [I/O List](docs/IO_List.md)
-- [Functional Test Procedures](docs/Testing_Procedures.md)
-- [Full Technical Manual (PDF)](ebook/Traffic_Technical_Manual.pdf) — 25-page project ebook covering actuated-vs-fixed-time signal context, architecture, hardware, the gap-out / longest-wait fairness / preemption control philosophy, full annotated code, HMI design, alarm philosophy, testing/commissioning, and a HAZOP-style hazard register
+- [I/O List](IO_List.md)
+- [Functional Test Procedures](Testing_Procedures.md)
+- [Full Technical Manual (PDF)](Traffic_Technical_Manual.pdf) — 25-page project ebook covering actuated-vs-fixed-time signal context, architecture, hardware, the gap-out / longest-wait fairness / preemption control philosophy, full annotated code, HMI design, alarm philosophy, testing/commissioning, and a HAZOP-style hazard register
 
 ## ⚠️ Disclaimer
 
