@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adaptive Urban Traffic Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121417; --panel:#171A1E; --line:#2A2E34;
+    --text-hi:#EEF1F4; --text-mid:#8D96A0; --text-dim:#4E555D;
+    --red:#E63946; --amber:#FFC107; --green:#2ECC71; --cyan:#4FD1E8;
+    --mono:'IBM Plex Mono',monospace; --label:'Barlow Semi Condensed',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text-hi);font-family:var(--label);}
+  body{min-height:100vh;padding:18px;background:var(--bg);}
+  .console{max-width:1260px;margin:0 auto;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,0.5);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;background:#0F1113;border-bottom:1px solid var(--line);}
+  .site{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;}
+  h1{font-size:17px;margin:2px 0 2px;letter-spacing:.04em;font-weight:700;text-transform:uppercase;}
+  .sub{font-size:11px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;}
+  .clock{font-family:var(--mono);font-size:13px;color:var(--text-mid);text-align:right;}
+  .clock span{display:block;color:var(--text-dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase;}
+
+  .statusrow{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;border-bottom:1px solid var(--line);}
+  .pill{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.05em;padding:8px 14px;border-radius:3px;border:1px solid;color:var(--green);border-color:rgba(46,204,113,.4);background:rgba(46,204,113,.08);}
+  .pill.trip{color:var(--red);border-color:rgba(230,57,70,.5);background:rgba(230,57,70,.12);animation:blink 1s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.5;}}
+  .metabox{font-family:var(--mono);font-size:10.5px;color:var(--text-mid);}
+  .metabox b{color:var(--text-hi);}
+  .metaitem{display:inline-block;margin-left:18px;}
+
+  .stage{padding:10px;background:#1c1f23;}
+  .stage svg{width:100%;display:block;max-width:620px;margin:0 auto;}
+
+  .main{display:flex;border-top:1px solid var(--line);}
+  .col{padding:16px 20px;border-right:1px solid var(--line);}
+  .col:last-child{border-right:none;}
+  .celltitle{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);margin:0 0 10px;font-weight:600;}
+
+  .metric{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;padding:6px 0;border-bottom:1px solid var(--line);}
+  .metric b{color:var(--text-hi);font-size:12px;}
+  .metric.flag b{color:var(--amber);}
+
+  .log{display:flex;flex-direction:column;max-height:230px;overflow-y:auto;margin-top:8px;}
+  .log-row{display:flex;padding:6px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;}
+  .log-row:last-child{border-bottom:none;}
+  .log-time{color:var(--text-dim);flex:none;width:52px;}
+  .log-tag{flex:none;width:6px;height:6px;border-radius:50%;margin:3px 7px 0 0;}
+  .log-tag.ok{background:var(--green);} .log-tag.trip{background:var(--red);} .log-tag.warn{background:var(--amber);} .log-tag.info{background:var(--cyan);}
+  .log-msg{color:var(--text-mid);}
+  ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+
+  .footer{padding:12px 22px;font-family:var(--mono);font-size:10px;color:var(--text-dim);border-top:1px solid var(--line);display:flex;justify-content:space-between;}
+</style>
+</head>
+<body>
+<div class="console">
+  <div class="topbar">
+    <div>
+      <div class="site">INTERSECTION 7TH &amp; MAIN &nbsp;&middot;&nbsp; CAB-014</div>
+      <h1>Adaptive Urban Traffic Management</h1>
+      <div class="sub">Vehicle Loop Sensor Optimization &mdash; Actuated Phase Control</div>
+    </div>
+    <div class="clock"><span>Cabinet Time</span><span id="clockval">00:00:00</span></div>
+  </div>
+
+  <div class="statusrow">
+    <div class="pill" id="statusPill">NS SERVING TRAFFIC</div>
+    <div class="metabox">
+      <span class="metaitem">PHASE TIMER <b id="phaseTimerVal">00</b> s</span>
+      <span class="metaitem">CYCLE <b id="cycleVal">1</b></span>
+    </div>
+  </div>
+
+  <div class="stage">
+    <svg viewBox="0 0 620 620">
+      <rect x="0" y="0" width="620" height="620" fill="#1c1f23"/>
+      <!-- Roads -->
+      <rect x="0" y="240" width="620" height="140" fill="#2b2f34"/>
+      <rect x="240" y="0" width="140" height="620" fill="#2b2f34"/>
+      <!-- Lane dividers -->
+      <line x1="0" y1="310" x2="620" y2="310" stroke="#555b62" stroke-width="2" stroke-dasharray="14 10"/>
+      <line x1="310" y1="0" x2="310" y2="620" stroke="#555b62" stroke-width="2" stroke-dasharray="14 10"/>
+      <!-- Crosswalks -->
+      <g fill="#cfd3d8" opacity="0.8">
+        <rect x="248" y="225" width="10" height="15"/><rect x="266" y="225" width="10" height="15"/><rect x="284" y="225" width="10" height="15"/><rect x="302" y="225" width="10" height="15"/><rect x="320" y="225" width="10" height="15"/><rect x="338" y="225" width="10" height="15"/><rect x="356" y="225" width="10" height="15"/>
+        <rect x="248" y="380" width="10" height="15"/><rect x="266" y="380" width="10" height="15"/><rect x="284" y="380" width="10" height="15"/><rect x="302" y="380" width="10" height="15"/><rect x="320" y="380" width="10" height="15"/><rect x="338" y="380" width="10" height="15"/><rect x="356" y="380" width="10" height="15"/>
+        <rect x="225" y="248" width="15" height="10"/><rect x="225" y="266" width="15" height="10"/><rect x="225" y="284" width="15" height="10"/><rect x="225" y="302" width="15" height="10"/><rect x="225" y="320" width="15" height="10"/><rect x="225" y="338" width="15" height="10"/><rect x="225" y="356" width="15" height="10"/>
+        <rect x="380" y="248" width="15" height="10"/><rect x="380" y="266" width="15" height="10"/><rect x="380" y="284" width="15" height="10"/><rect x="380" y="302" width="15" height="10"/><rect x="380" y="320" width="15" height="10"/><rect x="380" y="338" width="15" height="10"/><rect x="380" y="356" width="15" height="10"/>
+      </g>
+
+      <!-- Loop sensor pads -->
+      <rect id="loopN" x="283" y="150" width="54" height="18" fill="none" stroke="#4FD1E8" stroke-width="2" stroke-dasharray="4 3"/>
+      <rect id="loopS" x="283" y="452" width="54" height="18" fill="none" stroke="#4FD1E8" stroke-width="2" stroke-dasharray="4 3"/>
+      <rect id="loopE" x="452" y="283" width="18" height="54" fill="none" stroke="#4FD1E8" stroke-width="2" stroke-dasharray="4 3"/>
+      <rect id="loopW" x="150" y="283" width="18" height="54" fill="none" stroke="#4FD1E8" stroke-width="2" stroke-dasharray="4 3"/>
+
+      <!-- Signal heads -->
+      <g transform="translate(200,200)">
+        <rect x="-12" y="-38" width="24" height="76" rx="4" fill="#0d0f11" stroke="#444" stroke-width="1.5"/>
+        <circle id="sigN_r" cx="0" cy="-22" r="8" fill="#3a1216"/>
+        <circle id="sigN_y" cx="0" cy="0" r="8" fill="#3a2e08"/>
+        <circle id="sigN_g" cx="0" cy="22" r="8" fill="#0e3322"/>
+      </g>
+      <g transform="translate(420,420)">
+        <rect x="-12" y="-38" width="24" height="76" rx="4" fill="#0d0f11" stroke="#444" stroke-width="1.5"/>
+        <circle id="sigS_r" cx="0" cy="-22" r="8" fill="#3a1216"/>
+        <circle id="sigS_y" cx="0" cy="0" r="8" fill="#3a2e08"/>
+        <circle id="sigS_g" cx="0" cy="22" r="8" fill="#0e3322"/>
+      </g>
+      <g transform="translate(420,200)">
+        <rect x="-38" y="-12" width="76" height="24" rx="4" fill="#0d0f11" stroke="#444" stroke-width="1.5"/>
+        <circle id="sigE_r" cx="-22" cy="0" r="8" fill="#3a1216"/>
+        <circle id="sigE_y" cx="0" cy="0" r="8" fill="#3a2e08"/>
+        <circle id="sigE_g" cx="22" cy="0" r="8" fill="#0e3322"/>
+      </g>
+      <g transform="translate(200,420)">
+        <rect x="-38" y="-12" width="76" height="24" rx="4" fill="#0d0f11" stroke="#444" stroke-width="1.5"/>
+        <circle id="sigW_r" cx="-22" cy="0" r="8" fill="#3a1216"/>
+        <circle id="sigW_y" cx="0" cy="0" r="8" fill="#3a2e08"/>
+        <circle id="sigW_g" cx="22" cy="0" r="8" fill="#0e3322"/>
+      </g>
+
+      <!-- Cars layer -->
+      <g id="carsLayer"></g>
+
+      <text x="310" y="610" font-family="IBM Plex Mono" font-size="10" fill="#8D96A0" text-anchor="middle">LOOP DETECTORS SHOWN DASHED CYAN &mdash; HIGHLIGHT WHEN OCCUPIED</text>
+    </svg>
+  </div>
+
+  <div class="main">
+    <div class="col" style="flex:1;">
+      <p class="celltitle">Longest-Wait Registers</p>
+      <div class="metric"><span>NS wait time</span><b id="waitNS">0</b>&nbsp;s</div>
+      <div class="metric"><span>EW wait time</span><b id="waitEW">0</b>&nbsp;s</div>
+      <div class="metric"><span>Fairness ceiling</span><b>60</b>&nbsp;s</div>
+      <p class="celltitle" style="margin-top:16px;">Timing Parameters</p>
+      <div class="metric"><span>Min green</span><b>8 s</b></div>
+      <div class="metric"><span>Max green</span><b>45 s</b></div>
+      <div class="metric"><span>Gap timeout</span><b>3 s</b></div>
+    </div>
+    <div class="col" style="flex:1;">
+      <p class="celltitle">Signal State</p>
+      <div class="metric"><span>NS head</span><b id="nsHeadVal">RED</b></div>
+      <div class="metric"><span>EW head</span><b id="ewHeadVal">RED</b></div>
+      <div class="metric flag"><span>EVP active</span><b id="evpVal">no</b></div>
+      <p class="celltitle" style="margin-top:16px;">Demand</p>
+      <div class="metric"><span>NS demand</span><b id="demandNSVal">no</b></div>
+      <div class="metric"><span>EW demand</span><b id="demandEWVal">no</b></div>
+    </div>
+    <div class="col" style="flex:1.3;">
+      <p class="celltitle">Alarm &amp; Event Log</p>
+      <div class="log" id="logList"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Simulated HMI &mdash; desktop validation build, not for real traffic cabinet deployment</span>
+    <span>ADAPTIVE-UTMS v1.0 &middot; Author: Sipho Lucky Sibanda</span>
+  </div>
+</div>
+
+<script>
+  function fmtClock(sec){
+    var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+    function p(n){ return (n<10?'0':'')+n; }
+    return p(h)+':'+p(m)+':'+p(s);
+  }
+
+  var ns = 'http://www.w3.org/2000/svg';
+  var logList = document.getElementById('logList');
+  function pushLog(msg, level){
+    var row = document.createElement('div'); row.className = 'log-row';
+    var t = document.createElement('span'); t.className='log-time'; t.textContent = fmtClock(state.clock);
+    var g = document.createElement('span'); g.className = 'log-tag ' + level;
+    var m = document.createElement('span'); m.className='log-msg'; m.textContent = msg;
+    row.appendChild(t); row.appendChild(g); row.appendChild(m);
+    if(logList.firstChild){ logList.insertBefore(row, logList.firstChild); } else { logList.appendChild(row); }
+    while(logList.children.length > 24){ logList.removeChild(logList.lastChild); }
+  }
+
+  var state = {
+    clock: 0, phase: 'NS_GREEN', phaseTimer: 0, cycle: 1,
+    waitNS: 0, waitEW: 0, loopN:false, loopS:false, loopE:false, loopW:false,
+    evp: false, cars: []
+  };
+
+  function setSignal(prefix, color){
+    ['r','y','g'].forEach(function(c){
+      var el = document.getElementById('sig'+prefix+'_'+c);
+      var off = {r:'#3a1216', y:'#3a2e08', g:'#0e3322'};
+      var on = {r:'#E63946', y:'#FFC107', g:'#2ECC71'};
+      el.setAttribute('fill', (c===color) ? on[c] : off[c]);
+    });
+  }
+
+  function spawnCar(dir){
+    var g = document.createElementNS(ns, 'g');
+    var rect = document.createElementNS(ns, 'rect');
+    var w = (dir==='N'||dir==='S') ? 14 : 24;
+    var h = (dir==='N'||dir==='S') ? 24 : 14;
+    rect.setAttribute('width', w); rect.setAttribute('height', h);
+    rect.setAttribute('rx', 3);
+    rect.setAttribute('fill', Math.random()<0.1 ? '#E63946' : '#C8D3DC');
+    g.appendChild(rect);
+    document.getElementById('carsLayer').appendChild(g);
+    var startPos = {N:-30, S:650, E:650, W:-30};
+    var stopPos = {N:170, S:450, E:450, W:170};
+    var lane = {N:293, S:293, E:293, W:293};
+    return { dir:dir, el:g, rect:rect, pos:startPos[dir], stopAt:stopPos[dir], lane:lane[dir], stopped:false, passed:false };
+  }
+
+  function updateCarTransform(car){
+    var x,y;
+    if (car.dir==='N'){ x = car.lane; y = car.pos; }
+    else if (car.dir==='S'){ x = car.lane+24; y = car.pos; }
+    else if (car.dir==='E'){ x = car.pos; y = car.lane; }
+    else { x = car.pos; y = car.lane+24; }
+    car.el.setAttribute('transform', 'translate('+x+','+y+')');
+  }
+
+  function render(){
+    document.getElementById('clockval').textContent = fmtClock(state.clock);
+    document.getElementById('phaseTimerVal').textContent = Math.round(state.phaseTimer);
+    document.getElementById('cycleVal').textContent = state.cycle;
+    document.getElementById('waitNS').textContent = Math.round(state.waitNS);
+    document.getElementById('waitEW').textContent = Math.round(state.waitEW);
+    document.getElementById('evpVal').textContent = state.evp ? 'YES' : 'no';
+    document.getElementById('demandNSVal').textContent = (state.loopN||state.loopS) ? 'yes' : 'no';
+    document.getElementById('demandEWVal').textContent = (state.loopE||state.loopW) ? 'yes' : 'no';
+
+    var nsOn = (state.phase==='NS_GREEN') ? 'g' : (state.phase==='NS_YELLOW' ? 'y' : 'r');
+    var ewOn = (state.phase==='EW_GREEN') ? 'g' : (state.phase==='EW_YELLOW' ? 'y' : 'r');
+    if (state.phase==='PREEMPT'){ nsOn = state.preemptNS ? 'g' : 'r'; ewOn = state.preemptNS ? 'r' : 'g'; }
+    setSignal('N', nsOn); setSignal('S', nsOn); setSignal('E', ewOn); setSignal('W', ewOn);
+    document.getElementById('nsHeadVal').textContent = nsOn.toUpperCase()==='G'?'GREEN':(nsOn.toUpperCase()==='Y'?'YELLOW':'RED');
+    document.getElementById('ewHeadVal').textContent = ewOn.toUpperCase()==='G'?'GREEN':(ewOn.toUpperCase()==='Y'?'YELLOW':'RED');
+
+    var pill = document.getElementById('statusPill');
+    if (state.evp) { pill.className = 'pill trip'; pill.textContent = 'EMERGENCY PREEMPTION'; }
+    else if (state.phase==='NS_GREEN'||state.phase==='NS_YELLOW') { pill.className='pill'; pill.textContent='NS SERVING TRAFFIC'; }
+    else if (state.phase==='EW_GREEN'||state.phase==='EW_YELLOW') { pill.className='pill'; pill.textContent='EW SERVING TRAFFIC'; }
+    else { pill.className='pill'; pill.textContent='CLEARANCE / ALL RED'; }
+
+    document.getElementById('loopN').setAttribute('stroke', state.loopN ? '#4FD1E8' : '#2a4a52');
+    document.getElementById('loopN').setAttribute('fill', state.loopN ? 'rgba(79,209,232,0.25)' : 'none');
+    document.getElementById('loopS').setAttribute('stroke', state.loopS ? '#4FD1E8' : '#2a4a52');
+    document.getElementById('loopS').setAttribute('fill', state.loopS ? 'rgba(79,209,232,0.25)' : 'none');
+    document.getElementById('loopE').setAttribute('stroke', state.loopE ? '#4FD1E8' : '#2a4a52');
+    document.getElementById('loopE').setAttribute('fill', state.loopE ? 'rgba(79,209,232,0.25)' : 'none');
+    document.getElementById('loopW').setAttribute('stroke', state.loopW ? '#4FD1E8' : '#2a4a52');
+    document.getElementById('loopW').setAttribute('fill', state.loopW ? 'rgba(79,209,232,0.25)' : 'none');
+  }
+
+  // ---- Car movement simulation ----
+  function moveCars(dt){
+    var speed = 70 * (dt/1000);
+    var greenNS = (state.phase==='NS_GREEN') || (state.phase==='PREEMPT' && state.preemptNS);
+    var greenEW = (state.phase==='EW_GREEN') || (state.phase==='PREEMPT' && !state.preemptNS);
+
+    for (var i=state.cars.length-1;i>=0;i--){
+      var car = state.cars[i];
+      var dirIsNS = (car.dir==='N'||car.dir==='S');
+      var canGo = dirIsNS ? greenNS : greenEW;
+      var movingToward = (car.dir==='N'||car.dir==='W') ? 1 : -1;
+
+      var atStop = dirIsNS
+        ? ((car.dir==='N' && car.pos >= car.stopAt) || (car.dir==='S' && car.pos <= car.stopAt))
+        : ((car.dir==='W' && car.pos >= car.stopAt) || (car.dir==='E' && car.pos <= car.stopAt));
+
+      if (!car.passed && atStop && !canGo){
+        car.stopped = true;
+      } else {
+        car.stopped = false;
+        car.pos += movingToward * speed;
+      }
+      if (atStop && canGo) car.passed = true;
+      updateCarTransform(car);
+
+      if (car.pos > 680 || car.pos < -60) {
+        car.el.remove(); state.cars.splice(i,1);
+      }
+    }
+
+    // Loop occupancy = a stopped car sitting at that approach's stop line
+    state.loopN = state.cars.some(function(c){ return c.dir==='N' && c.stopped; });
+    state.loopS = state.cars.some(function(c){ return c.dir==='S' && c.stopped; });
+    state.loopE = state.cars.some(function(c){ return c.dir==='E' && c.stopped; });
+    state.loopW = state.cars.some(function(c){ return c.dir==='W' && c.stopped; });
+  }
+
+  // ---- Phase state machine (mirrors the PLC logic at HMI-illustrative fidelity) ----
+  function tickPhase(dt){
+    state.phaseTimer += dt/1000;
+    var demandNS = state.loopN || state.loopS;
+    var demandEW = state.loopE || state.loopW;
+
+    if (!demandNS && state.phase!=='NS_GREEN') state.waitNS = 0; else if (demandNS && state.phase!=='NS_GREEN') state.waitNS += dt/1000;
+    if (!demandEW && state.phase!=='EW_GREEN') state.waitEW = 0; else if (demandEW && state.phase!=='EW_GREEN') state.waitEW += dt/1000;
+
+    if (state.evp) { state.phase = 'PREEMPT'; return; }
+
+    if (state.phase==='NS_GREEN' && state.phaseTimer > 10 && !demandNS){ state.phase='NS_YELLOW'; state.phaseTimer=0; pushLog('NS gapped out - no further demand', 'info'); }
+    else if (state.phase==='NS_GREEN' && state.phaseTimer > 18){ state.phase='NS_YELLOW'; state.phaseTimer=0; pushLog('NS max green reached', 'warn'); }
+    else if (state.phase==='NS_YELLOW' && state.phaseTimer > 3){ state.phase='ALLRED1'; state.phaseTimer=0; }
+    else if (state.phase==='ALLRED1' && state.phaseTimer > 2){
+      state.cycle++;
+      if (demandEW){ state.phase='EW_GREEN'; } else if (demandNS){ state.phase='NS_GREEN'; }
+      state.phaseTimer=0;
+    }
+    else if (state.phase==='EW_GREEN' && state.phaseTimer > 10 && !demandEW){ state.phase='EW_YELLOW'; state.phaseTimer=0; pushLog('EW gapped out - no further demand', 'info'); }
+    else if (state.phase==='EW_GREEN' && state.phaseTimer > 18){ state.phase='EW_YELLOW'; state.phaseTimer=0; pushLog('EW max green reached', 'warn'); }
+    else if (state.phase==='EW_YELLOW' && state.phaseTimer > 3){ state.phase='ALLRED2'; state.phaseTimer=0; }
+    else if (state.phase==='ALLRED2' && state.phaseTimer > 2){
+      if (demandNS){ state.phase='NS_GREEN'; } else if (demandEW){ state.phase='EW_GREEN'; } else { state.phase='ALLRED1'; }
+      state.phaseTimer=0;
+    }
+  }
+
+  var lastT = Date.now();
+  function loop(){
+    var now = Date.now();
+    var dt = now - lastT;
+    lastT = now;
+    state.clock += dt/1000;
+    moveCars(dt);
+    tickPhase(dt);
+    render();
+  }
+  setInterval(loop, 50);
+
+  // Spawn cars periodically on each approach
+  setInterval(function(){ if (Math.random()<0.5) state.cars.push(spawnCar('N')); }, 2200);
+  setInterval(function(){ if (Math.random()<0.5) state.cars.push(spawnCar('S')); }, 2500);
+  setInterval(function(){ if (Math.random()<0.4) state.cars.push(spawnCar('E')); }, 2000);
+  setInterval(function(){ if (Math.random()<0.4) state.cars.push(spawnCar('W')); }, 2400);
+
+  pushLog('System enabled - adaptive control active', 'ok');
+
+  // Scripted EVP event
+  setTimeout(function(){ state.evp = true; state.preemptNS = true; pushLog('EVP request received on North approach - preempting', 'trip'); }, 16000);
+  setTimeout(function(){ state.evp = false; pushLog('Emergency vehicle cleared - resuming normal service', 'ok'); }, 24000);
+</script>
+</body>
+</html>
